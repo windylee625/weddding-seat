@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>座位表管理｜Harry & Windy</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<style>
+:root { --oat: #d8ccb6; --oat-soft: #e9e1d2; --cocoa: #583217; --cocoa-soft: #8a6a53; --paper: #f6f3ec; --card: #fffdf9; --line: #cdbfa6; --child: #e3b7ae; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--cocoa); line-height: 1.6;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; }
+.wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
+h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: .08em; }
+h2 { font-size: 18px; margin: 0 0 10px; letter-spacing: .06em; }
+p { margin: 6px 0; }
+.muted { color: var(--cocoa-soft); font-size: 14px; }
+.card { background: var(--card); border: 1px solid var(--oat); border-radius: 16px; padding: 18px; margin-top: 18px; }
+button, .btn { font: inherit; font-size: 15px; color: var(--paper); background: var(--cocoa); border: 0; border-radius: 999px;
+  padding: 10px 22px; min-height: 44px; cursor: pointer; }
+button.ghost { color: var(--cocoa); background: var(--oat); }
+button:disabled { opacity: .4; cursor: not-allowed; }
+input[type=text], input[type=url] { font: inherit; font-size: 15px; color: var(--cocoa); background: #fff; border: 1.5px solid var(--line);
+  border-radius: 8px; padding: 6px 10px; width: 100%; }
+input[type=file] { font: inherit; font-size: 15px; max-width: 100%; }
+ol { padding-left: 1.4em; margin: 8px 0; }
+.alert { background: var(--oat-soft); border-radius: 10px; padding: 10px 14px; margin-top: 10px; font-size: 14px; }
+.alert.err { background: #f3d9d2; }
+.tbl { border-top: 1px solid var(--oat); margin-top: 14px; padding-top: 12px; }
+.tbl h3 { font-size: 16px; margin: 0 0 6px; }
+.tbl h3 small { font-weight: 400; font-size: 13px; color: var(--cocoa-soft); margin-left: 8px; }
+.row { display: grid; grid-template-columns: 26px minmax(0, 1.3fr) auto auto minmax(0, 1fr); gap: 8px; align-items: center; padding: 4px 6px; border-radius: 8px; }
+.row.joined { background: var(--oat-soft); }
+.row.first-of-group { margin-top: 4px; }
+.row .n { color: var(--cocoa-soft); font-size: 13px; text-align: right; }
+.row .name { overflow-wrap: anywhere; }
+.row label { font-size: 13px; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+.row.empty .name { color: var(--cocoa-soft); font-style: italic; }
+.rowhead { font-size: 12px; color: var(--cocoa-soft); }
+.qr { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; }
+.qr canvas { width: 220px; height: 220px; border: 1px solid var(--oat); border-radius: 8px; background: #fff; }
+.qr .side { flex: 1; min-width: 240px; }
+@media (max-width: 560px) {
+  .row { grid-template-columns: 22px minmax(0, 1fr) auto auto; }
+  .row input[type=text] { grid-column: 2 / -1; }
+  .rowhead { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>座位表管理</h1>
+  <p class="muted">這一頁只給新人使用，請不要分享給賓客。所有處理都在你的瀏覽器內完成，Excel 不會被上傳到任何地方。</p>
+
+  <div class="card">
+    <h2>一、更新座位表</h2>
+    <ol>
+      <li>選擇最新的「喜宴座位表」Excel 檔（.xlsx）。</li>
+      <li>檢查下方轉換結果，必要時勾選「與上一位同行」「兒童座椅」或補上可搜尋的全名。</li>
+      <li>按「下載 seats.js」，再把它上傳到網站覆蓋舊檔（GitHub：Add file → Upload files → Commit changes）。</li>
+    </ol>
+    <p><input type="file" id="file" accept=".xlsx"></p>
+    <p class="muted" id="current"></p>
+    <div id="msgs"></div>
+    <p style="margin-top:14px">
+      <button id="download" disabled>下載 seats.js</button>
+    </p>
+    <div id="tables"></div>
+  </div>
+
+  <div class="card">
+    <h2>二、產生 QR Code</h2>
+    <div class="qr">
+      <canvas id="qr" width="660" height="660"></canvas>
+      <div class="side">
+        <p><label for="url">賓客查詢頁網址</label></p>
+        <p><input type="url" id="url" placeholder="https://你的帳號.github.io/seat/"></p>
+        <p class="muted" id="qrinfo"></p>
+        <p style="margin-top:12px"><button id="qrdl">下載 QR Code（PNG）</button></p>
+        <p class="muted">印製前請用兩三支不同的手機實際掃描確認。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="seats.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function stripParens(s) { return s.replace(/\(.*?\)/g, '').trim(); }
+function download(name, blob) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+/* ================= Excel (.xlsx) 解析 ================= */
+// .xlsx 是 zip 檔：讀 central directory 找到各檔，再用瀏覽器內建的 DecompressionStream 解壓
+async function readZip(buf) {
+  const dv = new DataView(buf);
+  let p = buf.byteLength - 22;
+  while (p >= 0 && dv.getUint32(p, true) !== 0x06054b50) p--;
+  if (p < 0) throw new Error('這不是有效的 .xlsx 檔案');
+  const count = dv.getUint16(p + 10, true);
+  let off = dv.getUint32(p + 16, true);
+  const dec = new TextDecoder();
+  const files = {};
+  for (let i = 0; i < count && dv.getUint32(off, true) === 0x02014b50; i++) {
+    const nameLen = dv.getUint16(off + 28, true), extraLen = dv.getUint16(off + 30, true), commentLen = dv.getUint16(off + 32, true);
+    files[dec.decode(new Uint8Array(buf, off + 46, nameLen))] = {
+      method: dv.getUint16(off + 10, true), size: dv.getUint32(off + 20, true), local: dv.getUint32(off + 42, true) };
+    off += 46 + nameLen + extraLen + commentLen;
+  }
+  return {
+    names: Object.keys(files),
+    async text(name) {
+      const f = files[name];
+      if (!f) return null;
+      const start = f.local + 30 + dv.getUint16(f.local + 26, true) + dv.getUint16(f.local + 28, true);
+      const data = new Uint8Array(buf, start, f.size);
+      if (f.method === 0) return dec.decode(data);
+      if (typeof DecompressionStream === 'undefined') throw new Error('此瀏覽器版本太舊，請改用最新版 Chrome 或 Edge');
+      return await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+    }
+  };
+}
+
+function cellText(node) {
+  return [...node.getElementsByTagName('t')].filter(t => t.parentNode.localName !== 'rPh').map(t => t.textContent).join('');
+}
+
+// 回傳 Map：'欄,列'（皆從 1 起算）→ 儲存格文字
+async function readSheet(buf) {
+  const zip = await readZip(buf);
+  const xml = s => new DOMParser().parseFromString(s, 'application/xml');
+  const strings = [];
+  const ss = await zip.text('xl/sharedStrings.xml');
+  if (ss) [...xml(ss).getElementsByTagName('si')].forEach(si => strings.push(cellText(si)));
+  const sheetName = zip.names.filter(n => /^xl\/worksheets\/[^/]+\.xml$/.test(n)).sort()[0];
+  if (!sheetName) throw new Error('Excel 裡找不到工作表');
+  const cells = new Map();
+  [...xml(await zip.text(sheetName)).getElementsByTagName('c')].forEach(c => {
+    const m = /^([A-Z]+)(\d+)$/.exec(c.getAttribute('r') || '');
+    if (!m) return;
+    const v = c.getElementsByTagName('v')[0];
+    const type = c.getAttribute('t');
+    let val = type === 'inlineStr' ? cellText(c) : v ? (type === 's' ? strings[+v.textContent] : v.textContent) : '';
+    val = String(val == null ? '' : val).replace(/\s+/g, ' ').trim();
+    if (!val) return;
+    let col = 0;
+    for (const ch of m[1]) col = col * 26 + ch.charCodeAt(0) - 64;
+    cells.set(col + ',' + m[2], val);
+  });
+  return cells;
+}
+
+/* ================= 轉換成座位資料 ================= */
+const PLAN_IDS = ['主桌', '2', '3', '5', '6', '7', '8', '9', '10', '11', '12', '13', '15', '16', '17', '18', '19', '20', '21', '22', '23'];
+const OLD = window.SEATING || { tables: [], fixes: {} };
+const FIXES = OLD.fixes || {};
+let model = null; // [{ id, name, seatText, rows: [{ name, join, child, childAuto, aliases }] }]
+
+function splitSeat(raw) {
+  const parts = raw.split('|');
+  return { name: parts[0], aliases: parts.slice(1).filter(p => p[0] !== '#'), child: parts.includes('#child') };
+}
+
+// 從目前網站上的 seats.js 帶入先前設定過的別名、兒童座椅與同行關係
+function carryOver() {
+  const byTable = new Map(), byName = new Map(), pairs = new Set();
+  OLD.tables.forEach(t => {
+    (t.g || []).forEach(group => {
+      if (group === '') return;
+      const seats = [].concat(group).map(splitSeat);
+      seats.forEach((s, i) => {
+        const key = t.id + '|' + s.name;
+        if (!byTable.has(key)) byTable.set(key, []);
+        byTable.get(key).push(s);
+        if (!byName.has(s.name) && (s.aliases.length || s.child)) byName.set(s.name, s);
+        if (i > 0) pairs.add(t.id + '|' + seats[i - 1].name + '|' + s.name);
+      });
+    });
+  });
+  return { byTable, byName, pairs };
+}
+
+function buildModel(cells) {
+  const get = (c, r) => cells.get(c + ',' + r) || '';
+  let maxCol = 0, maxRow = 0;
+  for (const k of cells.keys()) { const [c, r] = k.split(',').map(Number); maxCol = Math.max(maxCol, c); maxRow = Math.max(maxRow, r); }
+  const headers = [];
+  for (let r = 1; r <= maxRow; r++) if (get(3, r) === '桌號') headers.push(r);
+  if (!headers.length) throw new Error('找不到「桌號」列（C 欄），請確認是飯店提供的座位表格式');
+
+  const old = carryOver();
+  const tables = [];
+  headers.forEach((h, idx) => {
+    const end = idx + 1 < headers.length ? headers[idx + 1] - 1 : maxRow;
+    let first = h + 4;
+    for (let r = h + 1; r <= end; r++) if (get(3, r) === '1') { first = r; break; }
+    for (let c = 4; c <= maxCol; c++) {
+      const id = get(c, h);
+      if (!id) continue;
+      const names = [];
+      for (let r = first; r <= end; r++) {
+        let name = get(c, r);
+        for (const from in FIXES) name = name.split(from).join(FIXES[from]);
+        names.push(name);
+      }
+      while (names.length && !names[names.length - 1]) names.pop();
+
+      let head = null, prev = null;
+      const rows = names.map(name => {
+        if (!name) { head = prev = null; return { name: '' }; }
+        const base = stripParens(name);
+        // 自動判定同行：與本組最短的名字互為開頭（草哥／草哥老婆），或先前已設定為同行
+        let join = false;
+        if (prev !== null) {
+          join = (head && base && (base.startsWith(head) || head.startsWith(base))) || old.pairs.has(id + '|' + prev + '|' + name);
+        }
+        head = join ? (base.length < head.length ? base : head) : base;
+        prev = name;
+        const queue = old.byTable.get(id + '|' + name);
+        const carried = (queue && queue.shift()) || old.byName.get(name) || { aliases: [], child: false };
+        const childAuto = name.includes('(兒)');
+        return { name, join, childAuto, child: childAuto || carried.child, aliases: carried.aliases.join('、') };
+      });
+      tables.push({ id, name: get(c, h + 1), seatText: get(c, h + 2), rows });
+    }
+  });
+  return tables;
+}
+
+// 座位數與第 1 位的排法（規則：有兒童座椅 → 正 12 點；純大人 11、12 位 → 並排）
+function tableShape(t) {
+  const m = /\d+/.exec(t.seatText);
+  const seats = Math.max(m ? +m[0] : 10, t.rows.length);
+  const hasChild = t.seatText.includes('+') || t.rows.some(r => r.child);
+  return { seats, pair: !hasChild && seats >= 11 };
+}
+
+function toSeating() {
+  return {
+    updated: new Date().toISOString(),
+    fixes: FIXES,
+    tables: model.map(t => {
+      const g = [];
+      let cur = null;
+      t.rows.forEach(r => {
+        if (!r.name) { g.push(''); cur = null; return; }
+        const aliases = r.aliases.split(/[、,，;；|]/).map(a => a.replace(/#/g, '').trim()).filter(Boolean);
+        const seat = [r.name, ...aliases, ...(r.child && !r.childAuto ? ['#child'] : [])].join('|');
+        if (r.join && cur) cur.push(seat);
+        else { cur = [seat]; g.push(cur); }
+      });
+      const shape = tableShape(t);
+      return { id: t.id, name: t.name, seats: shape.seats, pair: shape.pair, g: g.map(x => (Array.isArray(x) && x.length === 1 ? x[0] : x)) };
+    })
+  };
+}
+
+function seatsJs() {
+  const s = toSeating();
+  return '/* 座位資料：由 admin.html 從「喜宴座位表」Excel 轉換產生，更新時整個檔案覆蓋即可。 */\n' +
+    'window.SEATING = {\n"updated": ' + JSON.stringify(s.updated) + ',\n"fixes": ' + JSON.stringify(s.fixes) + ',\n"tables": [\n' +
+    s.tables.map(t => JSON.stringify(t)).join(',\n') + '\n]\n};\n';
+}
+
+/* ================= 畫面 ================= */
+function namesOf(tables, getNames) {
+  const m = new Map();
+  tables.forEach(t => getNames(t).forEach(n => { const k = '第 ' + t.id + ' 桌　' + n; m.set(k, (m.get(k) || 0) + 1); }));
+  return m;
+}
+
+function renderMessages() {
+  const msgs = [];
+  const total = model.reduce((s, t) => s + t.rows.filter(r => r.name).length, 0);
+  msgs.push('<div class="alert">共讀到 ' + model.length + ' 桌、' + total + ' 位賓客。</div>');
+
+  const before = namesOf(OLD.tables, t => (t.g || []).flatMap(g => (g === '' ? [] : [].concat(g).map(s => splitSeat(s).name))));
+  const after = namesOf(model, t => t.rows.filter(r => r.name).map(r => r.name));
+  const added = [], removed = [];
+  after.forEach((n, k) => { for (let i = before.get(k) || 0; i < n; i++) added.push(k); });
+  before.forEach((n, k) => { for (let i = after.get(k) || 0; i < n; i++) removed.push(k); });
+  if (OLD.tables.length) {
+    msgs.push('<div class="alert">與目前網站上的版本相比：' +
+      (added.length || removed.length ? '' : '名單沒有變動。') +
+      (added.length ? '<br><b>新增 ' + added.length + ' 位</b>：' + added.map(esc).join('、') : '') +
+      (removed.length ? '<br><b>移除 ' + removed.length + ' 位</b>：' + removed.map(esc).join('、') : '') + '</div>');
+  }
+  const offPlan = model.filter(t => !PLAN_IDS.includes(t.id)).map(t => t.id);
+  if (offPlan.length) msgs.push('<div class="alert err">桌號 ' + offPlan.map(esc).join('、') + ' 不在平面圖上，賓客仍可查到座位，但平面圖不會標示位置。</div>');
+  const big = model.filter(t => t.rows.length > 12).map(t => t.id);
+  if (big.length) msgs.push('<div class="alert err">第 ' + big.map(esc).join('、') + ' 桌超過 12 位，請確認名單。</div>');
+  $('msgs').innerHTML = msgs.join('');
+}
+
+function renderTables() {
+  $('tables').innerHTML = model.map((t, ti) => {
+    const shape = tableShape(t);
+    const filled = t.rows.filter(r => r.name).length;
+    return '<div class="tbl"><h3>' + (t.id === '主桌' ? '主桌' : '第 ' + esc(t.id) + ' 桌　' + esc(t.name)) +
+      '<small>名單 ' + filled + ' 位／座位 ' + shape.seats + ' 位　' + (shape.pair ? '第 1 位並排於上方' : '第 1 位在正 12 點') + '</small></h3>' +
+      (ti === 0 ? '<div class="row rowhead"><span></span><span>Excel 上的名字</span><span>同行</span><span>兒童</span><span>可搜尋的全名／別名（用「、」分隔）</span></div>' : '') +
+      t.rows.map((r, ri) => {
+        if (!r.name) return '<div class="row empty"><span class="n">' + (ri + 1) + '</span><span class="name">（空位）</span><span></span><span></span><span></span></div>';
+        const canJoin = ri > 0 && t.rows[ri - 1].name;
+        const groupStart = !r.join && t.rows[ri + 1] && t.rows[ri + 1].join;
+        return '<div class="row' + (r.join || groupStart ? ' joined' : '') + (groupStart ? ' first-of-group' : '') + '">' +
+          '<span class="n">' + (ri + 1) + '</span><span class="name">' + esc(r.name) + '</span>' +
+          '<label><input type="checkbox" data-t="' + ti + '" data-r="' + ri + '" data-f="join"' + (r.join ? ' checked' : '') + (canJoin ? '' : ' disabled') + '>與上一位同行</label>' +
+          '<label><input type="checkbox" data-t="' + ti + '" data-r="' + ri + '" data-f="child"' + (r.child ? ' checked' : '') + (r.childAuto ? ' disabled' : '') + '>兒童座椅</label>' +
+          '<input type="text" data-t="' + ti + '" data-r="' + ri + '" data-f="aliases" value="' + esc(r.aliases) + '" aria-label="' + esc(r.name) + ' 的全名或別名">' +
+          '</div>';
+      }).join('') + '</div>';
+  }).join('');
+}
+
+$('tables').addEventListener('change', ev => {
+  const el = ev.target, f = el.getAttribute('data-f');
+  if (!f) return;
+  const row = model[+el.getAttribute('data-t')].rows[+el.getAttribute('data-r')];
+  row[f] = el.type === 'checkbox' ? el.checked : el.value;
+  if (el.type === 'checkbox') renderTables(); // 同行底色與排法說明會跟著變
+});
+
+$('file').addEventListener('change', async ev => {
+  const file = ev.target.files[0];
+  if (!file) return;
+  $('download').disabled = true;
+  $('tables').innerHTML = '';
+  try {
+    model = buildModel(await readSheet(await file.arrayBuffer()));
+    renderMessages();
+    renderTables();
+    $('download').disabled = false;
+  } catch (err) {
+    model = null;
+    $('msgs').innerHTML = '<div class="alert err">讀取失敗：' + esc(err.message) + '</div>';
+  }
+});
+
+$('download').addEventListener('click', () => {
+  if (model) download('seats.js', new Blob([seatsJs()], { type: 'text/javascript' }));
+});
+
+if (OLD.tables.length) {
+  const d = new Date(OLD.updated);
+  const n = OLD.tables.reduce((s, t) => s + (t.g || []).reduce((a, g) => a + (g === '' ? 0 : [].concat(g).length), 0), 0);
+  $('current').textContent = '目前網站上的版本：' + n + ' 位賓客' + (isNaN(d) ? '' : '，更新於 ' + d.toLocaleString('zh-TW', { hour12: false }));
+}
+
+/* ================= QR Code（Byte 模式、容錯等級 M、版本 1–9） ================= */
+const QR_EC = [null, // [每區塊容錯碼數, [區塊數, 每區塊資料碼數], ...]
+  [10, [1, 16]], [16, [1, 28]], [26, [1, 44]], [18, [2, 32]], [24, [2, 43]],
+  [16, [4, 27]], [18, [4, 31]], [22, [2, 38], [2, 39]], [22, [3, 36], [2, 37]]];
+const QR_ALIGN = [null, [], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34], [6, 22, 38], [6, 24, 42], [6, 26, 46]];
+
+function gfMul(x, y) {
+  let z = 0;
+  for (let i = 7; i >= 0; i--) { z = (z << 1) ^ ((z >>> 7) * 0x11d); z ^= ((y >>> i) & 1) * x; }
+  return z;
+}
+function rsDivisor(degree) {
+  const result = new Array(degree).fill(0);
+  result[degree - 1] = 1;
+  let root = 1;
+  for (let i = 0; i < degree; i++) {
+    for (let j = 0; j < degree; j++) {
+      result[j] = gfMul(result[j], root);
+      if (j + 1 < degree) result[j] ^= result[j + 1];
+    }
+    root = gfMul(root, 2);
+  }
+  return result;
+}
+function rsRemainder(data, divisor) {
+  const result = divisor.map(() => 0);
+  data.forEach(b => {
+    const factor = b ^ result.shift();
+    result.push(0);
+    divisor.forEach((coef, i) => { result[i] ^= gfMul(coef, factor); });
+  });
+  return result;
+}
+
+function qrEncode(text) {
+  const bytes = [...new TextEncoder().encode(text)];
+  const dataCap = v => QR_EC[v].slice(1).reduce((s, [n, len]) => s + n * len, 0);
+  let version = 1;
+  while (version <= 9 && bytes.length + 2 > dataCap(version)) version++;
+  if (version > 9) throw new Error('網址太長，無法產生 QR Code');
+
+  // 資料位元：模式 0100、長度 8 bit、內容、結束符、補滿
+  const bits = [];
+  const push = (val, len) => { for (let i = len - 1; i >= 0; i--) bits.push((val >>> i) & 1); };
+  push(4, 4); push(bytes.length, 8);
+  bytes.forEach(b => push(b, 8));
+  const cap = dataCap(version) * 8;
+  push(0, Math.min(4, cap - bits.length));
+  while (bits.length % 8) bits.push(0);
+  for (let pad = 0xec; bits.length < cap; pad ^= 0xec ^ 0x11) push(pad, 8);
+  const data = [];
+  for (let i = 0; i < bits.length; i += 8) data.push(bits.slice(i, i + 8).reduce((a, b) => (a << 1) | b, 0));
+
+  // 分區塊、加容錯碼、交錯排列
+  const [ecLen, ...groups] = QR_EC[version];
+  const divisor = rsDivisor(ecLen);
+  const blocks = [];
+  let pos = 0;
+  groups.forEach(([n, len]) => { for (let i = 0; i < n; i++) { const d = data.slice(pos, pos + len); pos += len; blocks.push({ d, e: rsRemainder(d, divisor) }); } });
+  const codewords = [];
+  const maxLen = Math.max(...blocks.map(b => b.d.length));
+  for (let i = 0; i < maxLen; i++) blocks.forEach(b => { if (i < b.d.length) codewords.push(b.d[i]); });
+  for (let i = 0; i < ecLen; i++) blocks.forEach(b => codewords.push(b.e[i]));
+
+  // 功能圖形
+  const size = version * 4 + 17;
+  const mod = Array.from({ length: size }, () => new Array(size).fill(false));
+  const fn = Array.from({ length: size }, () => new Array(size).fill(false));
+  const set = (x, y, dark) => { mod[y][x] = dark; fn[y][x] = true; };
+  for (let i = 0; i < size; i++) { set(6, i, i % 2 === 0); set(i, 6, i % 2 === 0); }
+  [[3, 3], [size - 4, 3], [3, size - 4]].forEach(([cx, cy]) => {
+    for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+      const x = cx + dx, y = cy + dy, dist = Math.max(Math.abs(dx), Math.abs(dy));
+      if (x >= 0 && x < size && y >= 0 && y < size) set(x, y, dist !== 2 && dist !== 4);
+    }
+  });
+  const al = QR_ALIGN[version];
+  al.forEach((cx, i) => al.forEach((cy, j) => {
+    if ((i === 0 && j === 0) || (i === 0 && j === al.length - 1) || (i === al.length - 1 && j === 0)) return;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) set(cx + dx, cy + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+  }));
+  const drawFormat = mask => {
+    let rem = mask; // 容錯等級 M 的代碼為 00
+    for (let i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
+    const f = ((mask << 10) | rem) ^ 0x5412;
+    const bit = i => ((f >>> i) & 1) !== 0;
+    for (let i = 0; i <= 5; i++) set(8, i, bit(i));
+    set(8, 7, bit(6)); set(8, 8, bit(7)); set(7, 8, bit(8));
+    for (let i = 9; i < 15; i++) set(14 - i, 8, bit(i));
+    for (let i = 0; i < 8; i++) set(size - 1 - i, 8, bit(i));
+    for (let i = 8; i < 15; i++) set(8, size - 15 + i, bit(i));
+    set(8, size - 8, true);
+  };
+  drawFormat(0);
+  if (version >= 7) {
+    let rem = version;
+    for (let i = 0; i < 12; i++) rem = (rem << 1) ^ ((rem >>> 11) * 0x1f25);
+    const v = (version << 12) | rem;
+    for (let i = 0; i < 18; i++) {
+      const dark = ((v >>> i) & 1) !== 0, a = size - 11 + (i % 3), b = Math.floor(i / 3);
+      set(a, b, dark); set(b, a, dark);
+    }
+  }
+
+  // 資料模組：由右下角起，兩欄一組上下蛇行
+  let k = 0;
+  for (let right = size - 1; right >= 1; right -= 2) {
+    if (right === 6) right = 5;
+    for (let vert = 0; vert < size; vert++) for (let j = 0; j < 2; j++) {
+      const x = right - j, y = ((right + 1) & 2) === 0 ? size - 1 - vert : vert;
+      if (!fn[y][x] && k < codewords.length * 8) { mod[y][x] = ((codewords[k >>> 3] >>> (7 - (k & 7))) & 1) !== 0; k++; }
+    }
+  }
+
+  // 遮罩：八種都試，取連續同色與 2x2 色塊最少、黑白最平均者
+  const MASKS = [(x, y) => (x + y) % 2 === 0, (x, y) => y % 2 === 0, (x, y) => x % 3 === 0, (x, y) => (x + y) % 3 === 0,
+    (x, y) => (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0, (x, y) => (x * y) % 2 + (x * y) % 3 === 0,
+    (x, y) => ((x * y) % 2 + (x * y) % 3) % 2 === 0, (x, y) => ((x + y) % 2 + (x * y) % 3) % 2 === 0];
+  const applyMask = m => { for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (!fn[y][x] && MASKS[m](x, y)) mod[y][x] = !mod[y][x]; };
+  const penalty = () => {
+    let p = 0, dark = 0;
+    for (let a = 0; a < size; a++) for (const line of [mod[a], mod.map(row => row[a])]) {
+      let run = 1;
+      for (let b = 1; b <= size; b++) {
+        if (b < size && line[b] === line[b - 1]) run++;
+        else { if (run >= 5) p += run - 2; run = 1; }
+      }
+    }
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+      if (mod[y][x]) dark++;
+      if (x + 1 < size && y + 1 < size && mod[y][x] === mod[y][x + 1] && mod[y][x] === mod[y + 1][x] && mod[y][x] === mod[y + 1][x + 1]) p += 3;
+    }
+    return p + Math.floor(Math.abs(dark * 20 / (size * size) - 10)) * 10;
+  };
+  let best = 0, bestScore = Infinity;
+  for (let m = 0; m < 8; m++) {
+    applyMask(m); drawFormat(m);
+    const score = penalty();
+    if (score < bestScore) { bestScore = score; best = m; }
+    applyMask(m); // 遮罩是 XOR，再套一次即還原
+  }
+  applyMask(best); drawFormat(best);
+  return { size, modules: mod, version, mask: best, codewords, fn };
+}
+
+function drawQr() {
+  const canvas = $('qr'), ctx = canvas.getContext('2d');
+  const url = $('url').value.trim();
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  $('qrdl').disabled = true;
+  if (!url) { $('qrinfo').textContent = '請輸入網址。'; return; }
+  try {
+    const qr = qrEncode(url);
+    const quiet = 4, cell = Math.floor(canvas.width / (qr.size + quiet * 2));
+    const offset = Math.floor((canvas.width - cell * qr.size) / 2);
+    ctx.fillStyle = '#583217';
+    qr.modules.forEach((row, y) => row.forEach((dark, x) => { if (dark) ctx.fillRect(offset + x * cell, offset + y * cell, cell, cell); }));
+    $('qrinfo').textContent = '掃描後會開啟：' + url;
+    $('qrdl').disabled = false;
+  } catch (err) {
+    $('qrinfo').textContent = err.message;
+  }
+}
+
+$('url').value = /^https?:$/.test(location.protocol) ? location.origin + location.pathname.replace(/[^/]*$/, '') : '';
+$('url').addEventListener('input', drawQr);
+$('qrdl').addEventListener('click', () => $('qr').toBlob(blob => download('wedding-seating-qr.png', blob), 'image/png'));
+drawQr();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "Harry & Windy 座位查詢",
+  "short_name": "座位查詢",
+  "description": "Harry & Windy Wedding 2026.11.07 賓客座位查詢",
+  "lang": "zh-Hant",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f3ec",
+  "theme_color": "#d8ccb6",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
