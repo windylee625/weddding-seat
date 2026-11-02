@@ -573,7 +573,7 @@ function drawQr() {
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   $('qrdl').disabled = true;
-  if (!url) { $('qrinfo').textContent = '請輸入網址。'; return; }
+  if (!url) { $('qrinfo').textContent = '請輸入網站網址，例如 https://你的帳號.github.io/seat/'; return; }
   try {
     const qr = qrEncode(url);
     const quiet = 4, cell = Math.floor(canvas.width / (qr.size + quiet * 2));
@@ -587,11 +587,33 @@ function drawQr() {
   }
 }
 
+// 部署在網站上時，網址由目前頁面推算；從電腦直接開啟（file://）時無法推算，改用輸入過的網址
 const SITE = /^https?:$/.test(location.protocol) ? location.origin + location.pathname.replace(/[^/]*$/, '') : '';
-$('url').value = SITE;
-$('urlGuest').addEventListener('click', () => { $('url').value = SITE; drawQr(); });
-$('urlStaff').addEventListener('click', () => { $('url').value = SITE + 'staff.html'; drawQr(); });
-$('url').addEventListener('input', drawQr);
+const URL_KEY = 'hw-seating-qr-url';
+function siteBase() {
+  if (SITE) return SITE;
+  const v = $('url').value.trim();
+  if (!/^https?:\/\//i.test(v)) return '';
+  return v.replace(/[?#].*$/, '').replace(/(index|staff|admin)\.html$/i, '').replace(/\/?$/, '/');
+}
+function setUrl(page) {
+  const base = siteBase();
+  if (!base) {
+    $('url').focus();
+    $('qrinfo').textContent = '這一頁是從電腦直接開啟的，請先在上方輸入網站網址（例如 https://你的帳號.github.io/seat/），再按按鈕。';
+    return;
+  }
+  $('url').value = base + page;
+  saveUrl();
+  drawQr();
+}
+function saveUrl() { try { localStorage.setItem(URL_KEY, $('url').value.trim()); } catch (e) { /* 無法儲存時略過 */ } }
+let savedUrl = '';
+try { savedUrl = localStorage.getItem(URL_KEY) || ''; } catch (e) { /* 無法讀取時略過 */ }
+$('url').value = SITE || savedUrl;
+$('urlGuest').addEventListener('click', () => setUrl(''));
+$('urlStaff').addEventListener('click', () => setUrl('staff.html'));
+$('url').addEventListener('input', () => { saveUrl(); drawQr(); });
 $('qrdl').addEventListener('click', () => $('qr').toBlob(blob => download('wedding-seating-qr.png', blob), 'image/png'));
 drawQr();
 </script>
