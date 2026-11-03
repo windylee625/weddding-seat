@@ -104,8 +104,10 @@ ol { padding-left: 1.4em; margin: 8px 0; }
   </div>
 </div>
 
-<script src="seats.js"></script>
-<script src="shared.js"></script>
+<script>
+// 每次開啟都加上時間參數，避免瀏覽器用暫存的舊座位資料（離線時由 sw.js 改用快取）
+(function () { var v = Date.now(); document.write('<script src="seats.js?v=' + v + '"><\/script><script src="shared.js?v=' + v + '"><\/script>'); })();
+</script>
 <script>
 const $ = id => document.getElementById(id);
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }

@@ -1,5 +1,5 @@
 // 離線快取：有網路時一律拿最新版（座位表更新後不需改這個檔案），網路不穩或離線時用快取
-const CACHE = 'hw-seating-v4';
+const CACHE = 'hw-seating-v5';
 const ASSETS = [
   './',
   './index.html',

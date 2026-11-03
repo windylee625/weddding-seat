@@ -218,8 +218,10 @@ footer { text-align: center; margin-top: 26px; font-family: var(--serif-en); let
   <footer>WITH LOVE ALWAYS<span id="offline"></span><span id="updated"></span></footer>
 </main>
 
-<script src="seats.js"></script>
-<script src="shared.js"></script>
+<script>
+// 每次開啟都加上時間參數，避免瀏覽器用暫存的舊座位資料（離線時由 sw.js 改用快取）
+(function () { var v = Date.now(); document.write('<script src="seats.js?v=' + v + '"><\/script><script src="shared.js?v=' + v + '"><\/script>'); })();
+</script>
 <script>
 /* 名單在 seats.js（用 admin.html 從 Excel 轉換更新），平面圖座標與資料解析在 shared.js */
 const TABLES = buildTables(window.SEATING);
