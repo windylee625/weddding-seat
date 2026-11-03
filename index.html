@@ -156,6 +156,14 @@ svg .en-t { font-family: var(--serif-en); }
 .tbl.on text { fill: var(--paper); font-weight: 700; }
 .tbl .ring { fill: none; stroke: var(--cocoa); stroke-width: 2; opacity: 0; }
 .tbl.on .ring { animation: pulse 1.8s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+.tbl.also circle.body { fill: var(--oat); stroke: var(--cocoa); stroke-width: 2; }
+.tbl.also text { font-weight: 700; }
+.ticket .companions { margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(216, 204, 182, .35); text-align: left; }
+.ticket .companions .cap { text-align: center; margin-bottom: 6px; }
+.ticket .companions ul { list-style: none; margin: 0; padding: 0; }
+.ticket .companions li { padding: 6px 2px; font-size: 15px; line-height: 1.6; overflow-wrap: anywhere; }
+.ticket .companions li + li { border-top: 1px dashed rgba(216, 204, 182, .3); }
+.ticket .companions b { display: block; color: var(--oat); font-size: 13px; letter-spacing: .1em; }
 @keyframes pulse { 0% { opacity: .7; transform: scale(1); } 100% { opacity: 0; transform: scale(1.55); } }
 @media (prefers-reduced-motion: reduce) { .tbl.on .ring { animation: none; opacity: .5; } }
 
@@ -230,22 +238,18 @@ function norm(s) {
 }
 function stripParens(s) { return s.replace(/\(.*?\)/g, '').trim(); }
 
-// 一筆 entry = 一組同行者（單獨出席者為 1 人一組）；不指定座位的桌每人各一筆
-const ENTRIES = [];
-TABLES.forEach(t => {
-  const groups = t.free ? t.groups.flat().map(i => [i]) : t.groups;
-  groups.forEach(idx => {
-    const seats = idx.map(i => {
-      const s = t.slots[i];
-      const stripped = stripParens(s.name);
-      const inner = (s.name.match(/\((.*?)\)/g) || []).map(p => p.slice(1, -1).trim()).filter(p => p !== '兒');
-      const keys = [s.name, stripped, ...stripped.split(' '), ...inner, ...s.aliases, s.card].map(norm).filter(Boolean);
-      return { i, label: s.label, child: s.child, keys: [...new Set(keys)] };
-    });
-    // 組名取最短的名字，例如「草哥、草哥老婆、嚕嚕米」→ 草哥
-    const head = seats.map(s => stripParens(s.label)).reduce((a, b) => (b.length < a.length ? b : a));
-    ENTRIES.push({ table: t, seats, head });
+// 一筆 entry = 一組同行者（可跨桌；單獨出席者為 1 人一組）
+const ENTRIES = buildGroups(TABLES).map(g => {
+  const seats = g.members.map(({ t, i, seat: s }) => {
+    const stripped = stripParens(s.name);
+    const inner = (s.name.match(/\((.*?)\)/g) || []).map(p => p.slice(1, -1).trim()).filter(p => p !== '兒');
+    const keys = [s.name, stripped, ...stripped.split(' '), ...inner, ...s.aliases, s.card].map(norm).filter(Boolean);
+    return { t, i, label: s.label, child: s.child, keys: [...new Set(keys)] };
   });
+  const tables = [...new Set(seats.map(s => s.t))];
+  // 組名：有同行組代號就用代號，否則取最短的名字
+  const head = g.code || seats.map(s => stripParens(s.label)).reduce((a, b) => (b.length < a.length ? b : a));
+  return { seats, tables, head };
 });
 
 function entryTitle(e) { return e.seats.length === 1 ? e.seats[0].label : e.head; }
@@ -270,17 +274,30 @@ function search(raw) {
   return hits.sort((a, b) => a.rank - b.rank).map(h => h.e);
 }
 
+// 本人：組內最符合輸入文字的那一位（完全相同 > 開頭相同 > 包含）
+function selfOf(entry) {
+  const q = norm($('q').value);
+  if (!q) return entry.seats[0];
+  return entry.seats.find(s => s.keys.includes(q)) || entry.seats.find(s => s.keys.some(k => k.startsWith(q))) ||
+    entry.seats.find(s => s.keys.some(k => k.includes(q))) || entry.seats[0];
+}
+
 /* ----- 平面圖 ----- */
-function highlightTable(id) {
-  document.querySelectorAll('#plan .tbl').forEach(g => g.classList.toggle('on', g.getAttribute('data-id') === id));
+// own：本人所在桌（深色），others：同行者所在的其他桌（淺色）
+function highlightTables(own, others) {
+  document.querySelectorAll('#plan .tbl').forEach(g => {
+    const id = g.getAttribute('data-id');
+    g.classList.toggle('on', id === own);
+    g.classList.toggle('also', id !== own && (others || []).includes(id));
+  });
 }
 
 /* ----- 圓桌座位圖 ----- */
-function drawSeat(entry) {
-  const t = entry.table, W = 360, H = 336, cx = 180, cy = 176, R = 116;
+function drawSeat(t, seats) {
+  const W = 360, H = 336, cx = 180, cy = 176, R = 116;
   const sr = Math.min(21, Math.PI * R / t.seats * 0.78);
   const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img',
-    'aria-label': `${tableLabel(t)}圓桌座位圖，${entryTitle(entry)}${entry.seats.length > 1 ? '一行' : ''}的座位為第 ${entry.seats.map(s => s.i + 1).join('、')} 位` });
+    'aria-label': `${tableLabel(t)}圓桌座位圖，座位為第 ${seats.map(s => s.i + 1).join('、')} 位` });
 
   svg.appendChild(svgEl('text', { x: cx, y: 16, 'text-anchor': 'middle', 'font-size': 11, 'letter-spacing': 2, style: 'fill:#8a6a53' }, '▲ 舞台方向'));
   svg.appendChild(svgEl('circle', { cx, cy, r: 74, fill: '#e9e1d2', stroke: '#cdbfa6', 'stroke-width': 1.5 }));
@@ -290,7 +307,7 @@ function drawSeat(entry) {
     svg.appendChild(svgEl('text', { x: cx, y: cy + 22, 'text-anchor': 'middle', 'font-size': size, style: 'fill:#8a6a53' }, t.name));
   }
 
-  const mine = new Map(entry.seats.map((s, n) => [s.i, { seat: s, n: n + 1 }]));
+  const mine = new Map(seats.map((s, n) => [s.i, { seat: s, n: n + 1 }]));
   for (let i = 0; i < t.seats; i++) {
     const a = seatAngle(t, i);
     const x = cx + R * Math.sin(a), y = cy - R * Math.cos(a);
@@ -312,7 +329,7 @@ function drawSeat(entry) {
   box.textContent = '';
   box.appendChild(svg);
 
-  $('party').innerHTML = entry.seats.map((s, n) =>
+  $('party').innerHTML = seats.map((s, n) =>
     '<li' + (s.child ? ' class="child"' : '') + '><span class="num">' + (n + 1) + '</span>' +
     '<span class="name">' + esc(s.label) + '</span>' +
     (s.child ? '<span class="tag">兒童座椅</span>' : '') + '</li>').join('');
@@ -321,47 +338,44 @@ function drawSeat(entry) {
 /* ----- 畫面流程 ----- */
 function clearResult() {
   $('seatCard').hidden = true;
-  highlightTable(null);
+  highlightTables(null);
 }
 
-function ticketHtml(t, who) {
-  const main = t.id === '主桌';
-  return '<div class="ticket" id="ticket">' +
-    '<div class="who">' + esc(who) + '</div>' +
-    '<div class="cap" style="margin-top:10px">YOUR TABLE</div>' +
-    (main ? '<div class="no zh">主桌</div>'
-          : '<div class="no">' + esc(t.id) + '</div><div class="tname">第 ' + esc(t.id) + ' 桌' + (hasTableName(t) ? '｜' + esc(t.name) : '') + '</div>') +
-    (t.free ? '<div class="free">' + FREE_NOTE + '</div>' : '') +
-    '</div>';
+function nameList(seats) {
+  return seats.map(s => esc(s.label) + (s.child ? '（兒童座椅）' : '')).join('、');
 }
 
-// 標題用查詢到的那一位（輸入「凡淇」顯示「凡淇 一行 2 位」），沒有對到時用組名
-function whoOf(entry) {
-  const q = norm($('q').value);
-  if (!q) return entryTitle(entry);
-  const s = entry.seats.find(s => s.keys.includes(q)) || entry.seats.find(s => s.keys.some(k => k.startsWith(q))) ||
-    entry.seats.find(s => s.keys.some(k => k.includes(q)));
-  return s ? s.label : entryTitle(entry);
-}
-
+// 大字顯示本人桌號；同行者依桌列在下方（同桌時，指定座位的桌由座位圖下方名單呈現）
 function showEntry(entry, scroll) {
-  const t = entry.table;
+  const self = selfOf(entry);
+  const t = self.t;
   const n = entry.seats.length;
-  $('out').innerHTML = ticketHtml(t, whoOf(entry) + (n > 1 ? '　一行 ' + n + ' 位' : ''));
+  const main = t.id === '主桌';
+  const lines = [];
+  if (n > 1) {
+    const same = entry.seats.filter(s => s.t === t && s !== self);
+    if (same.length && t.free) lines.push('<li><b>同桌</b>' + nameList(same) + '</li>');
+    entry.tables.filter(x => x !== t).forEach(x => {
+      lines.push('<li><b>' + esc(tableLabel(x)) + (x.free ? '（自由入座）' : '') + '</b>' + nameList(entry.seats.filter(s => s.t === x)) + '</li>');
+    });
+  }
+  $('out').innerHTML =
+    '<div class="ticket" id="ticket">' +
+      '<div class="who">' + esc(self.label) + (n > 1 ? '　一行 ' + n + ' 位' : '') + '</div>' +
+      '<div class="cap" style="margin-top:10px">YOUR TABLE</div>' +
+      (main ? '<div class="no zh">主桌</div>'
+            : '<div class="no">' + esc(t.id) + '</div><div class="tname">第 ' + esc(t.id) + ' 桌' + (hasTableName(t) ? '｜' + esc(t.name) : '') + '</div>') +
+      (t.free ? '<div class="free">' + FREE_NOTE + '</div>' : '') +
+      (lines.length ? '<div class="companions"><div class="cap">同行親友</div><ul>' + lines.join('') + '</ul></div>' : '') +
+    '</div>';
   if (t.free) $('seatCard').hidden = true;
-  else { drawSeat(entry); $('seatCard').hidden = false; }
-  highlightTable(t.id);
+  else { drawSeat(t, entry.seats.filter(s => s.t === t)); $('seatCard').hidden = false; }
+  highlightTables(t.id, entry.tables.map(x => x.id));
   if (scroll) $('ticket').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// 不指定座位的桌：相符的人都在同一桌時，直接顯示桌號
-function showFreeTable(hits, scroll) {
-  const t = hits[0].table;
-  const names = [...new Set(hits.map(entryTitle))];
-  $('out').innerHTML = ticketHtml(t, names.slice(0, 3).join('、') + (names.length > 3 ? ' 等 ' + names.length + ' 位' : ''));
-  $('seatCard').hidden = true;
-  highlightTable(t.id);
-  if (scroll) $('ticket').scrollIntoView({ behavior: 'smooth', block: 'start' });
+function tablesText(e) {
+  return e.tables.map(t => esc(tableLabel(t)) + (e.tables.length === 1 && hasTableName(t) ? '<br>' + esc(t.name) : '')).join('、');
 }
 
 function run(scroll) {
@@ -374,7 +388,6 @@ function run(scroll) {
     return;
   }
   if (hits.length === 1) { showEntry(hits[0], scroll); return; }
-  if (hits.every(e => e.table === hits[0].table && e.table.free)) { showFreeTable(hits, scroll); return; }
   const MAX = 30;
   const out = $('out');
   out.innerHTML = '<div class="picks"><p>找到 ' + hits.length + ' 筆相符的結果，請點選您的姓名：</p></div>';
@@ -384,7 +397,7 @@ function run(scroll) {
     b.type = 'button';
     b.className = 'pick';
     b.innerHTML = '<span>' + esc(entryTitle(e)) + (e.seats.length > 1 ? '<small>一行 ' + e.seats.length + ' 位</small>' : '') + '</span>' +
-      '<span>' + esc(tableLabel(e.table)) + (hasTableName(e.table) ? '<br>' + esc(e.table.name) : '') + '</span>';
+      '<span>' + tablesText(e) + '</span>';
     b.addEventListener('click', () => showEntry(e, true));
     list.appendChild(b);
   });

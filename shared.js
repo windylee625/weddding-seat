@@ -19,32 +19,38 @@ function defaultCard(name) {
   return String(name || '').replace(/[（(]\s*兒\s*[)）]/g, '').replace(/^(新郎|新娘)\s*/, '').replace(/\s+/g, ' ').trim();
 }
 
-// 座位字串：'座位表上的名字|可搜尋的全名或別名|...|#child|@位卡名稱'
+// 座位字串：'座位表上的名字|可搜尋的全名或別名|...|#child|@位卡名稱|&同行組'
+// 同行組代號相同的人為同一組（可跨桌），查到其中任何一位都會一併顯示
 function parseSeat(raw) {
   const parts = String(raw).split('|');
   const name = parts[0];
   const card = parts.find(p => p[0] === '@');
+  const group = parts.find(p => p[0] === '&');
   return {
     name,
     label: name.replace(/[（(]\s*兒\s*[)）]/g, '').trim(),
-    aliases: parts.slice(1).filter(p => p && !/^[#@]/.test(p)),
+    aliases: parts.slice(1).filter(p => p && !/^[#@&]/.test(p)),
     child: /[（(]\s*兒\s*[)）]/.test(name) || parts.includes('#child'),
-    card: card ? card.slice(1) : defaultCard(name)
+    card: card ? card.slice(1) : defaultCard(name),
+    group: group ? group.slice(1).trim() : ''
   };
 }
 
-// 依 seats.js 組出所有桌次：slots 為依序的座位（null 為空位），groups 為同行者的座位索引
+// 依 seats.js 組出所有桌次：slots 為依序的座位（null 為空位）
+// 舊格式用 [ ] 包起來的同行者，會自動給一個只在該桌有效的同行組代號
 function buildTables(seating) {
   const list = (seating && seating.tables) || [];
   const norm = t => {
     const out = Object.assign({ name: '', seats: 10, free: false, g: [] }, t, { id: String(t.id) });
     out.slots = [];
-    out.groups = [];
-    out.g.forEach(group => {
+    out.g.forEach((group, gi) => {
       if (group === '') { out.slots.push(null); return; }
-      const idx = [];
-      [].concat(group).forEach(raw => { idx.push(out.slots.length); out.slots.push(parseSeat(raw)); });
-      out.groups.push(idx);
+      const arr = [].concat(group);
+      arr.forEach(raw => {
+        const s = parseSeat(raw);
+        if (!s.group && arr.length > 1) s.group = '\u0000' + out.id + ':' + gi;
+        out.slots.push(s);
+      });
     });
     out.seats = Math.max(+out.seats || 10, out.slots.length);
     return out;
@@ -52,6 +58,20 @@ function buildTables(seating) {
   const tables = PLAN.map(p => Object.assign(norm(list.find(t => String(t.id) === p.id) || { id: p.id }), p));
   list.forEach(t => { if (!PLAN_IDS.includes(String(t.id))) tables.push(norm(t)); });
   return tables;
+}
+
+// 全場的同行組：[{ code, members: [{ t, i, seat }] }]，依名單出現順序；沒有同行組的人自成一組
+function buildGroups(tables) {
+  const byCode = new Map(), out = [];
+  tables.forEach(t => t.slots.forEach((seat, i) => {
+    if (!seat) return;
+    const m = { t, i, seat };
+    if (!seat.group) { out.push({ code: '', members: [m] }); return; }
+    let g = byCode.get(seat.group);
+    if (!g) { g = { code: seat.group[0] === '\u0000' ? '' : seat.group, members: [] }; byCode.set(seat.group, g); out.push(g); }
+    g.members.push(m);
+  }));
+  return out;
 }
 
 // 第 i 位（0 起算）的角度：第 1 位在正 12 點（靠舞台側），順時針平分 360 度
