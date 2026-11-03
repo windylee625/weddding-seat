@@ -27,25 +27,32 @@ input[type=file] { font: inherit; font-size: 15px; max-width: 100%; }
 ol { padding-left: 1.4em; margin: 8px 0; }
 .alert { background: var(--oat-soft); border-radius: 10px; padding: 10px 14px; margin-top: 10px; font-size: 14px; }
 .alert.err { background: #f3d9d2; }
+[hidden] { display: none !important; }
 .tbl { border-top: 1px solid var(--oat); margin-top: 14px; padding-top: 12px; }
 .tbl h3 { font-size: 16px; margin: 0 0 6px; }
 .tbl h3 small { font-weight: 400; font-size: 13px; color: var(--cocoa-soft); margin-left: 8px; }
-.row { display: grid; grid-template-columns: 26px minmax(0, 1.2fr) minmax(0, .7fr) auto minmax(0, .8fr) minmax(0, 1fr); gap: 8px; align-items: center; padding: 4px 6px; border-radius: 8px; }
-.row.joined { background: var(--oat-soft); }
-.row.first-of-group { margin-top: 4px; }
+.row { display: grid; grid-template-columns: 22px 24px minmax(0, .9fr) minmax(0, 1fr) auto minmax(0, 1fr) 96px; gap: 8px; align-items: center;
+  padding: 4px 6px; border-radius: 8px; margin-top: 2px; }
+.row.sel { box-shadow: inset 0 0 0 2px var(--cocoa); }
 .row .n { color: var(--cocoa-soft); font-size: 13px; text-align: right; }
 .row .name { overflow-wrap: anywhere; }
 .row label { font-size: 13px; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+.row input[type=checkbox] { width: 18px; height: 18px; margin: 0; accent-color: var(--cocoa); }
 .row.empty .name { color: var(--cocoa-soft); font-style: italic; }
+.chip { font-size: 12px; line-height: 1.4; padding: 2px 8px; border-radius: 999px; background: rgba(255, 255, 255, .7); border: 1px solid rgba(88, 50, 23, .25); text-align: center; }
 .rowhead { font-size: 12px; color: var(--cocoa-soft); }
 .freebox { display: flex; gap: 6px; align-items: center; font-size: 14px; margin: 2px 0 8px; padding: 6px 10px; border-radius: 8px; background: var(--oat-soft); }
+.toolbar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px;
+  padding: 10px 12px; background: var(--card); border: 1.5px solid var(--cocoa); border-radius: 12px; box-shadow: 0 4px 14px rgba(88, 50, 23, .12); }
+.toolbar .info { flex: 1 1 220px; font-size: 14px; }
+.toolbar button { padding: 8px 16px; min-height: 40px; font-size: 14px; }
 .qr { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; }
 .qr canvas { width: 220px; height: 220px; border: 1px solid var(--oat); border-radius: 8px; background: #fff; }
 .qr .side { flex: 1; min-width: 240px; }
-@media (max-width: 560px) {
-  .row { grid-template-columns: 22px minmax(0, 1fr) auto auto; }
-  .row input[type=text] { grid-column: 2 / -1; }
-  .row input.code { grid-column: auto; }
+@media (max-width: 640px) {
+  .row { grid-template-columns: 22px 22px minmax(0, 1fr) auto; }
+  .row input[type=text] { grid-column: 3 / -1; }
+  .row .chip { grid-column: 3 / -1; justify-self: start; }
   .rowhead { display: none; }
 }
 </style>
@@ -58,12 +65,14 @@ ol { padding-left: 1.4em; margin: 8px 0; }
   <div class="card">
     <h2>一、更新座位表</h2>
     <ol>
-      <li>選擇最新的「喜宴座位表」Excel 檔（.xlsx）。</li>
-      <li>（選用）選擇「桌卡位卡生成器」匯出的位卡名單備份，位卡名稱會自動帶入。</li>
-      <li>檢查下方轉換結果：家人桌、同行組、兒童座椅、位卡名稱都可以手改。<br><span class="muted">同行組：填一樣代號的人就是同一組，可以跨桌（例如主桌的庭安堂哥和第 2 桌的老婆、小孩都填「庭安堂哥」）；留空代表單獨出席。</span></li>
-      <li>按「下載 seats.js」，再把它上傳到網站覆蓋舊檔（GitHub：Add file → Upload files → Commit changes）。</li>
+      <li>打開這頁時會自動載入網站目前的名單。座位表 Excel 有更新時，再選擇新的 Excel；只想改同行或顯示名稱，就不用選。</li>
+      <li>在下方名單修改：
+        <br><b>同行</b>：勾選要一起的人（可以跨桌），按上方「設為同行」；要拆開就勾選後按「解除同行」。同一組會用同一個底色。
+        <br><b>顯示名稱</b>：賓客查詢時看到的名字，也是飯店位卡擺放圖上的名字。
+        <br><b>家人桌</b>：勾選後該桌不指定座位，賓客只看到桌號，飯店不放位卡。</li>
+      <li>按「下載 seats.js」，確認下載的檔名是 <b>seats.js</b>（不是 seats (2).js），再上傳到 GitHub 覆蓋舊檔。</li>
     </ol>
-    <p><label>座位表 Excel：<input type="file" id="file" accept=".xlsx"></label></p>
+    <p><label>座位表 Excel（有更新時再選）：<input type="file" id="file" accept=".xlsx"></label></p>
     <p><label>位卡名單備份（選用）：<input type="file" id="cards" accept=".xlsx"></label></p>
     <p class="muted" id="current"></p>
     <div id="msgs"></div>
@@ -71,6 +80,12 @@ ol { padding-left: 1.4em; margin: 8px 0; }
       <button id="download" disabled>下載 seats.js</button>
     </p>
     <div id="groups"></div>
+    <div class="toolbar" id="toolbar" hidden>
+      <span class="info" id="selInfo"></span>
+      <button type="button" id="btnGroup">設為同行</button>
+      <button type="button" class="ghost" id="btnUngroup">解除同行</button>
+      <button type="button" class="ghost" id="btnClear">取消勾選</button>
+    </div>
     <div id="tables"></div>
   </div>
 
@@ -169,36 +184,56 @@ async function readSheet(buf) {
 const OLD = window.SEATING || { tables: [], fixes: {} };
 const FIXES = OLD.fixes || {};
 const FAMILY_RE = /家人|親戚|家族|服務/;
-let model = null;     // [{ id, name, seatText, free, rows: [{ name, group, child, childAuto, aliases, card }] }]
+const GROUP_COLORS = ['#f3dcc6', '#d9e8d2', '#d5e3f1', '#efd8e7', '#f2e8b9', '#dcd6f0', '#cfe9e4', '#f1d5cf', '#e4dccb', '#e0eac2'];
+// model: [{ id, name, seatText, seats, free, rows: [{ name, display, group, child, childAuto, aliases }] }]
+// display：賓客查詢與位卡擺放圖顯示的名字；group：同行組代號（同代號即同一組，可跨桌）
+let model = null;
 let cardMap = null;   // 位卡名單備份：'桌號|座位表名字' → [位卡顯示名稱, ...]
+const selected = new Set(); // 已勾選的座位：'桌索引:列索引'
 
 function applyFixes(name) {
   for (const from in FIXES) name = name.split(from).join(FIXES[from]);
   return name;
 }
 
-// 從目前網站上的 seats.js 帶入先前設定過的別名、兒童座椅、位卡名稱、同行組與家人桌設定
-function carryOver() {
-  const byTable = new Map(), byName = new Map(), free = new Map();
+// 目前網站上的 seats.js：每個座位帶上同行組代號（舊格式的 [ ] 同行者用組內最短的名字當代號）
+function oldTables() {
   const tables = buildTables(OLD);
-  tables.forEach(t => free.set(t.id, !!t.free));
-  // 舊格式的 [ ] 同行者沒有代號：用組內最短的名字當代號
-  const codeOf = new Map();
   buildGroups(tables).forEach(g => {
-    if (g.members.length < 2) return;
+    if (g.members.length < 2) { g.members.forEach(m => { m.seat.code = ''; }); return; }
     const code = g.code || g.members.map(m => stripParens(m.seat.label)).reduce((a, b) => (b.length < a.length ? b : a));
-    g.members.forEach(m => codeOf.set(m.seat, code));
+    g.members.forEach(m => { m.seat.code = code; });
   });
-  const bySlot = new Map(); // '桌號|第幾位' → 舊設定（名字改了但位置沒變時沿用）
-  tables.forEach(t => t.slots.forEach((s, i) => {
-    if (!s) return;
-    const c = Object.assign({}, s, { group: codeOf.get(s) || '' });
-    const key = t.id + '|' + s.name;
-    if (!byTable.has(key)) byTable.set(key, []);
-    byTable.get(key).push(c);
-    if (!byName.has(s.name)) byName.set(s.name, c);
-    bySlot.set(t.id + '|' + i, c);
+  return tables;
+}
+
+function toRow(s) {
+  const childAuto = /[（(]\s*兒\s*[)）]/.test(s.name);
+  return { name: s.name, display: s.card, group: s.code || '', child: childAuto || s.child, childAuto, aliases: s.aliases.join('、') };
+}
+
+// 不選 Excel 時，直接編輯網站目前的名單
+function modelFromSeating() {
+  return oldTables().filter(t => OLD.tables.some(o => String(o.id) === t.id)).map(t => ({
+    id: t.id, name: t.name, seatText: '', seats: t.seats, free: !!t.free,
+    rows: t.slots.map(s => (s ? toRow(s) : { name: '' }))
   }));
+}
+
+// 從目前的名單帶入先前設定過的顯示名稱、別名、兒童座椅、同行組與家人桌設定
+function carryOver() {
+  const byTable = new Map(), byName = new Map(), bySlot = new Map(), free = new Map();
+  oldTables().forEach(t => {
+    free.set(t.id, !!t.free);
+    t.slots.forEach((s, i) => {
+      if (!s) return;
+      const key = t.id + '|' + s.name;
+      if (!byTable.has(key)) byTable.set(key, []);
+      byTable.get(key).push(s);
+      if (!byName.has(s.name)) byName.set(s.name, s);
+      bySlot.set(t.id + '|' + i, s); // 名字改了但位置沒變時沿用
+    });
+  });
   return { byTable, byName, bySlot, free };
 }
 
@@ -234,14 +269,16 @@ function buildModel(cells) {
           const prev = old.bySlot.get(id + '|' + i);
           if (prev && !names.includes(prev.name)) { carried = prev; renamed = true; }
         }
-        carried = carried || old.byName.get(n) || null;
-        const childAuto = /[（(]\s*兒\s*[)）]/.test(n);
-        return {
-          name: n, childAuto, carried: !!carried, group: carried ? carried.group : '',
-          child: childAuto || !!(carried && carried.child),
-          aliases: carried ? carried.aliases.join('、') : '',
-          card: carried && !renamed ? carried.card : defaultCard(n)
-        };
+        // 換桌的人：沿用別名、兒童座椅與顯示名稱，同行組另外再確認
+        const moved = !carried && old.byName.get(n);
+        const base = toRow(carried || moved || parseSeat(n));
+        const row = Object.assign(base, { name: n, carried: !!carried });
+        row.childAuto = /[（(]\s*兒\s*[)）]/.test(n);
+        row.child = row.childAuto || row.child;
+        if (renamed) row.display = defaultCard(n);
+        else if (!carried) row.display = moved ? moved.card : defaultCard(n);
+        if (!carried) row.group = '';
+        return row;
       });
 
       // 新出現的人自動判定同行：相鄰且與本組最短的名字互為開頭（草哥／草哥老婆）
@@ -255,19 +292,19 @@ function buildModel(cells) {
       };
       rows.forEach(r => {
         if (!r.name) { flush(); return; }
-        const base = stripParens(r.name);
-        if (run.length && head && base && (base.startsWith(head) || head.startsWith(base))) {
+        const b = stripParens(r.name);
+        if (run.length && head && b && (b.startsWith(head) || head.startsWith(b))) {
           run.push(r);
-          if (base.length < head.length) head = base;
-        } else { flush(); run = [r]; head = base; }
+          if (b.length < head.length) head = b;
+        } else { flush(); run = [r]; head = b; }
       });
       flush();
 
       const free = old.free.has(id) ? old.free.get(id) : (id === '主桌' || FAMILY_RE.test(name));
-      tables.push({ id, name, seatText: get(c, h + 2), free, rows });
+      tables.push({ id, name, seatText: get(c, h + 2), seats: 0, free, rows });
     }
   });
-  // 自動產生的代號若和別桌撞名，加上桌號區分（手動設定的代號才會跨桌）
+  // 自動產生的代號若和別桌撞名，加上桌號區分
   autoCodes.forEach(({ r, id }) => {
     const clash = tables.some(t => t.id !== id && t.rows.some(x => x.group === r.group));
     if (clash) r.group = r.group + '-' + id;
@@ -284,7 +321,7 @@ function applyCardMap() {
   model.forEach(t => t.rows.forEach(r => {
     if (!r.name) return;
     const q = queues.get(t.id + '|' + r.name);
-    if (q && q.length) { r.card = q.shift(); hit++; } else miss.push(tableLabel(t) + '　' + r.name);
+    if (q && q.length) { r.display = q.shift(); hit++; } else miss.push(tableLabel(t) + '　' + r.name);
   }));
   return { hit, miss };
 }
@@ -312,23 +349,29 @@ async function readCardBackup(buf) {
   return map;
 }
 
-// 座位數：「+」前的數字與名單人數取較大者（兒童已含在名單內）
+// 座位數：「+」前的數字與名單人數取較大者（兒童已含在名單內）；沒有 Excel 時沿用原本的座位數
 function seatCount(t) {
-  const m = /\d+/.exec(t.seatText);
-  return Math.max(m ? +m[0] : 10, t.rows.length);
+  const m = /\d+/.exec(t.seatText || '');
+  return Math.max(m ? +m[0] : (t.seats || 10), t.rows.length);
 }
 
 const cleanCode = s => String(s || '').replace(/[|&@#]/g, '').trim();
+const cleanText = s => String(s || '').replace(/[|]/g, '').trim();
 
-// 同行組代號 → 人數（只有 1 人的代號不算同行）
-function groupCounts() {
+// 同行組代號 → 成員 [{ t, r }]（只有 1 人的代號不算同行）
+function groupMap() {
   const m = new Map();
-  model.forEach(t => t.rows.forEach(r => { const c = cleanCode(r.group); if (r.name && c) m.set(c, (m.get(c) || 0) + 1); }));
+  model.forEach(t => t.rows.forEach(r => {
+    const c = cleanCode(r.group);
+    if (!r.name || !c) return;
+    if (!m.has(c)) m.set(c, []);
+    m.get(c).push({ t, r });
+  }));
   return m;
 }
 
 function toSeating() {
-  const counts = groupCounts();
+  const groups = groupMap();
   return {
     updated: new Date().toISOString(),
     fixes: FIXES,
@@ -337,11 +380,11 @@ function toSeating() {
       g: t.rows.map(r => {
         if (!r.name) return '';
         const aliases = r.aliases.split(/[、,，;；|]/).map(a => a.replace(/[#@&]/g, '').trim()).filter(Boolean);
-        const card = (r.card || '').replace(/[|]/g, '').trim();
+        const display = cleanText(r.display);
         const code = cleanCode(r.group);
         return [r.name, ...aliases, ...(r.child && !r.childAuto ? ['#child'] : []),
-          ...(card && card !== defaultCard(r.name) ? ['@' + card] : []),
-          ...(code && counts.get(code) > 1 ? ['&' + code] : [])].join('|');
+          ...(display && display !== defaultCard(r.name) ? ['@' + display] : []),
+          ...(code && groups.get(code).length > 1 ? ['&' + code] : [])].join('|');
       })
     }))
   };
@@ -355,6 +398,9 @@ function seatsJs() {
 }
 
 /* ================= 畫面 ================= */
+const short = t => (t.id === '主桌' ? '主桌' : t.id + ' 桌');
+const showName = r => cleanText(r.display) || defaultCard(r.name);
+
 function namesOf(tables, getNames) {
   const m = new Map();
   tables.forEach(t => getNames(t).forEach(n => { const k = (t.id === '主桌' ? '主桌' : '第 ' + t.id + ' 桌') + '　' + n; m.set(k, (m.get(k) || 0) + 1); }));
@@ -362,35 +408,26 @@ function namesOf(tables, getNames) {
 }
 
 function groupSummary() {
-  const counts = groupCounts(), where = new Map();
-  model.forEach(t => t.rows.forEach(r => {
-    const c = cleanCode(r.group);
-    if (!r.name || !c) return;
-    if (!where.has(c)) where.set(c, new Set());
-    where.get(c).add(t.id === '主桌' ? '主桌' : t.id);
-  }));
-  const cross = [...where].filter(([, ids]) => ids.size > 1).map(([c, ids]) => esc(c) + '（' + [...ids].map(esc).join('、') + '，' + counts.get(c) + ' 位）');
-  const lone = [...counts].filter(([, n]) => n === 1).map(([c]) => esc(c));
-  return (cross.length ? '<div class="alert">跨桌同行：' + cross.join('；') + '</div>' : '') +
-    (lone.length ? '<div class="alert err">以下同行組只有 1 個人，不會生效：' + lone.join('、') + '。要和別人同組，請填一樣的代號。</div>' : '');
+  const cross = [...groupMap()].filter(([, ms]) => ms.length > 1 && new Set(ms.map(m => m.t)).size > 1)
+    .map(([, ms]) => ms.map(m => esc(showName(m.r))).join('、') + '（' + [...new Set(ms.map(m => short(m.t)))].map(esc).join('、') + '）');
+  return cross.length ? '<div class="alert">跨桌同行：' + cross.join('；') + '</div>' : '';
 }
 
 function renderMessages(extra) {
   const msgs = [];
   const total = model.reduce((s, t) => s + t.rows.filter(r => r.name).length, 0);
-  msgs.push('<div class="alert">共讀到 ' + model.length + ' 桌、' + total + ' 位賓客。</div>');
+  msgs.push('<div class="alert">共 ' + model.length + ' 桌、' + total + ' 位賓客。</div>');
 
   const before = namesOf(OLD.tables, t => (t.g || []).flatMap(g => (g === '' ? [] : [].concat(g).map(s => parseSeat(s).name))));
   const after = namesOf(model, t => t.rows.filter(r => r.name).map(r => r.name));
   const added = [], removed = [];
   after.forEach((n, k) => { for (let i = before.get(k) || 0; i < n; i++) added.push(k); });
   before.forEach((n, k) => { for (let i = after.get(k) || 0; i < n; i++) removed.push(k); });
-  if (OLD.tables.length) {
+  if (OLD.tables.length && (added.length || removed.length)) {
     msgs.push('<div class="alert">與目前網站上的版本相比：' +
-      (added.length || removed.length ? '' : '名單沒有變動。') +
       (added.length ? '<br><b>新增 ' + added.length + ' 位</b>：' + added.map(esc).join('、') : '') +
       (removed.length ? '<br><b>移除 ' + removed.length + ' 位</b>：' + removed.map(esc).join('、') : '') +
-      (added.length ? '<br>新增的人請檢查同行組、兒童座椅與位卡名稱。' : '') + '</div>');
+      (added.length ? '<br>新增的人請檢查同行、兒童座椅與顯示名稱。' : '') + '</div>');
   }
   if (extra) msgs.push(extra);
   const offPlan = model.filter(t => !PLAN_IDS.includes(t.id)).map(t => t.id);
@@ -398,41 +435,96 @@ function renderMessages(extra) {
   const big = model.filter(t => t.rows.length > 16).map(t => t.id);
   if (big.length) msgs.push('<div class="alert err">桌號 ' + big.map(esc).join('、') + ' 超過 16 位，請確認名單。</div>');
   $('msgs').innerHTML = msgs.join('');
-  $('groups').innerHTML = groupSummary();
 }
 
 function renderTables() {
-  const counts = groupCounts();
+  const groups = [...groupMap()].filter(([, ms]) => ms.length > 1);
+  const colorOf = new Map(groups.map(([c], i) => [c, GROUP_COLORS[i % GROUP_COLORS.length]]));
+  const info = new Map(groups);
   $('tables').innerHTML = model.map((t, ti) => {
     const filled = t.rows.filter(r => r.name).length;
     return '<div class="tbl"><h3>' + (t.id === '主桌' ? '主桌' : '第 ' + esc(t.id) + ' 桌　' + esc(t.name)) +
       '<small>名單 ' + filled + ' 位／座位 ' + seatCount(t) + ' 位</small></h3>' +
       '<label class="freebox"><input type="checkbox" data-t="' + ti + '" data-f="free"' + (t.free ? ' checked' : '') + '>家人桌：不指定座位（賓客只看到桌號，飯店不放位卡）</label>' +
-      '<div class="row rowhead"><span></span><span>Excel 上的名字</span><span>同行組</span><span>兒童</span><span>位卡名稱</span><span>可搜尋的全名／別名（用「、」分隔）</span></div>' +
+      '<div class="row rowhead"><span></span><span></span><span>Excel 上的名字</span><span>顯示名稱（查詢＆位卡）</span><span>兒童</span><span>可搜尋的全名／別名（用「、」分隔）</span><span>同行</span></div>' +
       t.rows.map((r, ri) => {
-        if (!r.name) return '<div class="row empty"><span class="n">' + (ri + 1) + '</span><span class="name">（空位）</span></div>';
+        if (!r.name) return '<div class="row empty"><span></span><span class="n">' + (ri + 1) + '</span><span class="name">（空位）</span></div>';
         const attrs = 'data-t="' + ti + '" data-r="' + ri + '"';
-        const grouped = counts.get(cleanCode(r.group)) > 1;
-        return '<div class="row' + (grouped ? ' joined' : '') + '">' +
+        const key = ti + ':' + ri;
+        const code = cleanCode(r.group);
+        const ms = info.get(code);
+        let chip = '';
+        if (ms) {
+          const others = [...new Set(ms.filter(m => m.t !== t).map(m => short(m.t)))];
+          chip = '<span class="chip" title="' + esc(ms.map(m => showName(m.r) + '（' + short(m.t) + '）').join('、')) + '">同行 ' + ms.length + ' 位' +
+            (others.length ? '<br>＋' + others.map(esc).join('、') : '') + '</span>';
+        }
+        return '<div class="row' + (selected.has(key) ? ' sel' : '') + '"' + (ms ? ' style="background:' + colorOf.get(code) + '"' : '') + '>' +
+          '<input type="checkbox" class="pick" data-key="' + key + '"' + (selected.has(key) ? ' checked' : '') + ' aria-label="勾選 ' + esc(r.name) + '">' +
           '<span class="n">' + (ri + 1) + '</span><span class="name">' + esc(r.name) + '</span>' +
-          '<input type="text" class="code" ' + attrs + ' data-f="group" value="' + esc(r.group) + '" placeholder="無" aria-label="' + esc(r.name) + ' 的同行組">' +
+          '<input type="text" ' + attrs + ' data-f="display" value="' + esc(r.display) + '" placeholder="' + esc(defaultCard(r.name)) + '" aria-label="' + esc(r.name) + ' 的顯示名稱">' +
           '<label><input type="checkbox" ' + attrs + ' data-f="child"' + (r.child ? ' checked' : '') + (r.childAuto ? ' disabled' : '') + '>兒童</label>' +
-          '<input type="text" ' + attrs + ' data-f="card" value="' + esc(r.card) + '" aria-label="' + esc(r.name) + ' 的位卡名稱">' +
-          '<input type="text" ' + attrs + ' data-f="aliases" value="' + esc(r.aliases) + '" aria-label="' + esc(r.name) + ' 的全名或別名">' +
-          '</div>';
+          '<input type="text" ' + attrs + ' data-f="aliases" value="' + esc(r.aliases) + '" placeholder="全名／別名（可空白）" aria-label="' + esc(r.name) + ' 的全名或別名">' +
+          (chip || '<span></span>') + '</div>';
       }).join('') + '</div>';
   }).join('');
+  $('groups').innerHTML = groupSummary();
+  renderToolbar();
+}
+
+function selectedRows() {
+  return [...selected].map(k => { const [ti, ri] = k.split(':').map(Number); return { t: model[ti], r: model[ti].rows[ri] }; });
+}
+
+function renderToolbar() {
+  $('toolbar').hidden = !model;
+  const sel = selectedRows();
+  $('selInfo').textContent = sel.length
+    ? '已勾選 ' + sel.length + ' 位：' + sel.map(({ t, r }) => showName(r) + '（' + short(t) + '）').join('、')
+    : '勾選名單左側的方框，再按「設為同行」或「解除同行」。';
+  $('btnGroup').disabled = sel.length < 2;
+  $('btnUngroup').disabled = !sel.length;
+  $('btnClear').disabled = !sel.length;
 }
 
 $('tables').addEventListener('change', ev => {
-  const el = ev.target, f = el.getAttribute('data-f');
+  const el = ev.target;
+  if (el.classList.contains('pick')) {
+    const key = el.getAttribute('data-key');
+    if (el.checked) selected.add(key); else selected.delete(key);
+    el.closest('.row').classList.toggle('sel', el.checked);
+    renderToolbar();
+    return;
+  }
+  const f = el.getAttribute('data-f');
   if (!f) return;
   const t = model[+el.getAttribute('data-t')];
   if (f === 'free') { t.free = el.checked; return; }
   const row = t.rows[+el.getAttribute('data-r')];
   row[f] = el.type === 'checkbox' ? el.checked : el.value;
-  if (f === 'group') { renderTables(); $('groups').innerHTML = groupSummary(); } // 同行底色與跨桌摘要跟著變
+  if (f === 'display') { renderTables(); } // 同行說明與已勾選名單會用到顯示名稱
 });
+
+// 設為同行：勾選的人成為同一組（他們原本的組不再包含他們）
+$('btnGroup').addEventListener('click', () => {
+  const sel = selectedRows();
+  if (sel.length < 2) return;
+  const used = new Set(groupMap().keys());
+  const base = cleanCode(showName(sel[0].r)) || '同行';
+  let code = base, k = 2;
+  while (used.has(code)) code = base + '-' + k++;
+  sel.forEach(({ r }) => { r.group = code; });
+  selected.clear();
+  renderTables();
+});
+
+$('btnUngroup').addEventListener('click', () => {
+  selectedRows().forEach(({ r }) => { r.group = ''; });
+  selected.clear();
+  renderTables();
+});
+
+$('btnClear').addEventListener('click', () => { selected.clear(); renderTables(); });
 
 function cardReport(res) {
   if (!res) return '';
@@ -440,20 +532,25 @@ function cardReport(res) {
     (res.miss.length ? '；<b>' + res.miss.length + ' 位沒對到</b>（沿用原本名稱，可在下方手改）：' + res.miss.map(esc).join('、') : '。') + '</div>';
 }
 
+function loadModel(m, extra) {
+  model = m;
+  selected.clear();
+  renderMessages(extra);
+  renderTables();
+  $('download').disabled = false;
+}
+
 $('file').addEventListener('change', async ev => {
   const file = ev.target.files[0];
   if (!file) return;
   $('download').disabled = true;
-  $('tables').innerHTML = '';
-  $('groups').innerHTML = '';
   try {
-    model = buildModel(await readSheet(await file.arrayBuffer()));
-    renderMessages(cardReport(applyCardMap()));
-    renderTables();
-    $('download').disabled = false;
+    const m = buildModel(await readSheet(await file.arrayBuffer()));
+    model = m;
+    loadModel(m, cardReport(applyCardMap()));
   } catch (err) {
-    model = null;
     $('msgs').innerHTML = '<div class="alert err">讀取失敗：' + esc(err.message) + '</div>';
+    if (model) $('download').disabled = false;
   }
 });
 
@@ -463,7 +560,6 @@ $('cards').addEventListener('change', async ev => {
   try {
     cardMap = await readCardBackup(await file.arrayBuffer());
     if (model) { renderMessages(cardReport(applyCardMap())); renderTables(); }
-    else $('msgs').innerHTML = '<div class="alert">已讀取位卡名單，選擇座位表 Excel 後會自動套用。</div>';
   } catch (err) {
     cardMap = null;
     $('msgs').innerHTML = '<div class="alert err">位卡名單讀取失敗：' + esc(err.message) + '</div>';
@@ -477,7 +573,8 @@ $('download').addEventListener('click', () => {
 if (OLD.tables.length) {
   const d = new Date(OLD.updated);
   const n = OLD.tables.reduce((s, t) => s + (t.g || []).reduce((a, g) => a + (g === '' ? 0 : [].concat(g).length), 0), 0);
-  $('current').textContent = '目前網站上的版本：' + n + ' 位賓客' + (isNaN(d) ? '' : '，更新於 ' + d.toLocaleString('zh-TW', { hour12: false }));
+  $('current').textContent = '已載入網站目前的名單：' + n + ' 位賓客' + (isNaN(d) ? '' : '，更新於 ' + d.toLocaleString('zh-TW', { hour12: false }));
+  loadModel(modelFromSeating());
 }
 
 /* ================= QR Code（Byte 模式、容錯等級 M、版本 1–9） ================= */

@@ -19,19 +19,21 @@ function defaultCard(name) {
   return String(name || '').replace(/[（(]\s*兒\s*[)）]/g, '').replace(/^(新郎|新娘)\s*/, '').replace(/\s+/g, ' ').trim();
 }
 
-// 座位字串：'座位表上的名字|可搜尋的全名或別名|...|#child|@位卡名稱|&同行組'
+// 座位字串：'座位表上的名字|可搜尋的全名或別名|...|#child|@顯示名稱|&同行組'
+// 顯示名稱：賓客查詢與位卡擺放圖上的名字（沒寫時用座位表名字去掉「(兒)」）
 // 同行組代號相同的人為同一組（可跨桌），查到其中任何一位都會一併顯示
 function parseSeat(raw) {
   const parts = String(raw).split('|');
   const name = parts[0];
-  const card = parts.find(p => p[0] === '@');
+  const shown = parts.find(p => p[0] === '@');
   const group = parts.find(p => p[0] === '&');
+  const display = (shown && shown.slice(1).trim()) || defaultCard(name);
   return {
     name,
-    label: name.replace(/[（(]\s*兒\s*[)）]/g, '').trim(),
+    label: display,
+    card: display,
     aliases: parts.slice(1).filter(p => p && !/^[#@&]/.test(p)),
     child: /[（(]\s*兒\s*[)）]/.test(name) || parts.includes('#child'),
-    card: card ? card.slice(1) : defaultCard(name),
     group: group ? group.slice(1).trim() : ''
   };
 }
