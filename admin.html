@@ -70,7 +70,7 @@ ol { padding-left: 1.4em; margin: 8px 0; }
         <br><b>同行</b>：勾選要一起的人（可以跨桌），按上方「設為同行」；要拆開就勾選後按「解除同行」。同一組會用同一個底色。
         <br><b>顯示名稱</b>：賓客查詢時看到的名字，也是飯店位卡擺放圖上的名字。
         <br><b>家人桌</b>：勾選後該桌不指定座位，賓客只看到桌號，飯店不放位卡。</li>
-      <li>按「下載 seats.js」，確認下載的檔名是 <b>seats.js</b>（不是 seats (2).js），再上傳到 GitHub 覆蓋舊檔。</li>
+      <li>按「下載 seats.js」，在跳出的存檔視窗選擇存放位置；如果那裡已經有舊的 seats.js，選「取代」直接覆蓋。檔名一定要是 <b>seats.js</b>（不是 seats (2).js），再上傳到 GitHub 覆蓋舊檔。</li>
     </ol>
     <p><label>座位表 Excel（有更新時再選）：<input type="file" id="file" accept=".xlsx"></label></p>
     <p><label>位卡名單備份（選用）：<input type="file" id="cards" accept=".xlsx"></label></p>
@@ -78,6 +78,7 @@ ol { padding-left: 1.4em; margin: 8px 0; }
     <div id="msgs"></div>
     <p style="margin-top:14px">
       <button id="download" disabled>下載 seats.js</button>
+      <span class="muted" id="saveInfo" style="margin-left:8px"></span>
     </p>
     <div id="groups"></div>
     <div class="toolbar" id="toolbar" hidden>
@@ -568,8 +569,30 @@ $('cards').addEventListener('change', async ev => {
   }
 });
 
-$('download').addEventListener('click', () => {
-  if (model) download('seats.js', new Blob([seatsJs()], { type: 'text/javascript' }));
+// 下載資料夾已有 seats.js 時，瀏覽器會自動改名成「seats (2).js」。
+// Chrome／Edge 改用存檔視窗，讓使用者直接覆蓋舊的 seats.js；其他瀏覽器維持一般下載並提醒改名。
+$('download').addEventListener('click', async () => {
+  if (!model) return;
+  const blob = new Blob([seatsJs()], { type: 'text/javascript' });
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: 'seats.js',
+        types: [{ description: '座位資料', accept: { 'text/javascript': ['.js'] } }]
+      });
+      const w = await handle.createWritable();
+      await w.write(blob);
+      await w.close();
+      $('saveInfo').textContent = handle.name === 'seats.js'
+        ? '已儲存為 seats.js，可以上傳到 GitHub 了。'
+        : '注意：存檔名稱是「' + handle.name + '」，上傳前請改成 seats.js。';
+      return;
+    } catch (err) {
+      if (err && err.name === 'AbortError') return; // 使用者取消存檔
+    }
+  }
+  download('seats.js', blob);
+  $('saveInfo').textContent = '已下載。如果下載的檔名變成「seats (2).js」，請先改名成 seats.js 再上傳。';
 });
 
 if (OLD.tables.length) {
